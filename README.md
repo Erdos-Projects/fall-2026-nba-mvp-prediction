@@ -1,2 +1,2 @@
-# fall-2026-nuclear-testing-seismology
-Team project: fall-2026-nuclear-testing-seismology
+# fall-2026-nba-mvp-prediction
+Team project: fall-2026-nba-mvp-prediction
