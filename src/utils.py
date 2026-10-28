@@ -34,7 +34,6 @@ def scrape_per_game_tables(start : int, end : int):
         
         
         # we would like to also have the year, team wins and team losses as data.  Unfortuantely these are not on the per-game page
-        # team_codes = list(df['Team'].unique())
         df.insert(0,'Year',[year-1]*len(df))
         df.insert(1,'Wins',[0]*len(df))
         df.insert(2,'Losses',[0]*len(df))
@@ -47,19 +46,6 @@ def scrape_per_game_tables(start : int, end : int):
             code = team.a['href'][7:10]
             df.loc[df['Team'] == code, ['Wins','Losses']] = [int(item.get_text()) for item in team.find_all("td")[3:5]]
         df.loc[df['Team'].str.endswith('TM'),['Wins','Losses']] = np.nan
-        # for team in team_codes:
-        #     print(f'{team}.',end='')
-        #     # need to handle the data where a player was on multiple teams
-        #     if team[-2:] == 'TM':
-        #         df.loc[df['Team'] == team,['Wins','Losses']] = np.nan
-        #         continue
-        #     team_req = requests.get(url=(BASE_URL+f'teams/{team}/{1981}.html'), headers=HTTP_HEADER)
-        #     team_html = team_req.text.replace("<!--", "").replace("-->", "")
-        #     team_soup = BeautifulSoup(team_html, "html.parser")
-        #     misc = team_soup.find("table", id="team_misc")
-            
-        #     df.loc[df['Team'] == team,['Wins','Losses']] = [int(misc.find_all('tr')[2].td.get_text()),int(misc.find_all('tr')[2].td.next_sibling.get_text())]
-        #     time.sleep(3.3)
         
         df.to_csv(filepath,encoding='utf-8',index=False)
         
