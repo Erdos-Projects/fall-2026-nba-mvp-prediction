@@ -46,7 +46,6 @@ def scrape_per_game_tables(start : int, end : int):
             code = team.a['href'][7:10]
             df.loc[df['Team'] == code, ['Wins','Losses']] = [int(item.get_text()) for item in team.find_all("td")[3:5]]
         df.loc[df['Team'].str.endswith('TM'),['Wins','Losses']] = np.nan
-        
         df.to_csv(filepath,encoding='utf-8',index=False)
         
         # add a comment to the top of the csv to explain the columns
