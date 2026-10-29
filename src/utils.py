@@ -10,6 +10,16 @@ from pathlib import Path
 
 from config import ROOT, BASE_URL, HTTP_HEADER
 
+def http_get(url):
+    '''
+    Does a get request at the specified URL with all desired headers, changes the encoding, and sleeps so that it isnt missed on accident.
+    '''
+    
+    req = requests.get(url, headers=HTTP_HEADER)
+    req.encoding = 'utf-8'                          # these are necessary to ensure that the names get encoded correctly if they are accented
+    time.sleep(3.3)                                 # need to rest or the site might get mad at us
+    return req
+
 def scrape_per_game_tables(start : int, end : int):
     '''
     start - year which the first season who's per-game data to download begins
@@ -26,23 +36,22 @@ def scrape_per_game_tables(start : int, end : int):
         os.makedirs(str(ROOT) + dirname, exist_ok=True)
         
         url_add = f'/leagues/NBA_{year}_per_game.html'
-        req = requests.get(url=BASE_URL+url_add, headers=HTTP_HEADER)
-        req.encoding= 'utf-8'                           # these are necessary to ensure that the names get encoded correctly if they are accented
-        time.sleep(3.3)                                 # need to rest or the site might get mad at us
+        req = http_get(url=BASE_URL+url_add)             
         soup = BeautifulSoup(req.text,'html.parser')
         
         df = pd.read_html(StringIO(req.text), encoding='utf-8')
         df = df[0].drop(columns=['Rk','Awards'])
         df = df.iloc[:-1]
         
+        # we need to include the player code that basketball-reference puts in its individual player pages in the data so that we can distinguish players with the same name
+        player_codes = [item.td['data-append-csv'] for item in soup.table.find_all('tr')[1:-1] if item.td.get('data-append-csv')]
+        df.insert(0,'Code',player_codes)
         
         # we would like to also have the year, team wins and team losses as data.  Unfortuantely these are not on the per-game page
         print(f'Adding team win/losses...')
         
         url_add = f'leagues/NBA_{year}_ratings.html'
-        team_req = requests.get(url=BASE_URL+url_add, headers=HTTP_HEADER)
-        team_req.encoding= 'utf-8'                      # these are necessary to ensure that the names get encoded correctly if they are accented
-        time.sleep(3.3)                                 # need to rest or the site might get mad at us
+        team_req = http_get(url=BASE_URL+url_add)
         team_soup = BeautifulSoup(team_req.text, "html.parser")
         team_data = team_soup.find_all('table')[0].find_all('tr')[2:]
         
@@ -54,22 +63,30 @@ def scrape_per_game_tables(start : int, end : int):
             df.loc[df['Team'] == code, ['Wins','Losses']] = [int(item.get_text()) for item in team.find_all("td")[3:5]]
         df.loc[df['Team'].str.endswith('TM'),['Wins','Losses']] = np.nan
         
+        
         # now we add a column with the MVP point share recieved by each player
         print(f'Adding MVP vote share...')
         # scrape the data and put it in a df
         url_add = f'awards/awards_{year}.html'
-        mvp_req = requests.get(url=BASE_URL+url_add, headers=HTTP_HEADER)
-        mvp_req.encoding= 'utf-8'                       # these are necessary to ensure that the names get encoded correctly if they are accented
-        time.sleep(3.3)                                 # need to rest or the site might get mad at us
+        mvp_req = http_get(url=BASE_URL+url_add)
+        mvp_soup = BeautifulSoup(mvp_req.text, 'lxml')
         mvp_df = pd.read_html(StringIO(mvp_req.text), encoding='utf-8',header=1)[0]
-        # add a column to the df that is to be exported anf populate it
+        player_codes = [item.td['data-append-csv'] for item in mvp_soup.table.find_all('tr')[2:] if item.td.get('data-append-csv')]   # need the codes to match the data to our main df
+        mvp_df.insert(0,'Code',player_codes)
+        # add a column to the df that is to be exported and populate it
         df['MVP'] = [0.0]*len(df)
-        for player in mvp_df.Player:
-            df.loc[df['Player'] == player, 'MVP'] = sum(mvp_df[mvp_df['Player'] == player]['Share'])
+        for player_code in mvp_df.Code:
+            df.loc[df['Code'] == player_code, 'MVP'] = sum(mvp_df[mvp_df['Code'] == player_code]['Share'])
+        
         # export the df to a csv
         df.to_csv(filepath,encoding='utf-8',index=False)
+        
         # add a comment to the top of the csv to explain the columns
-        csv_comment = ['Season start year','Team wins', 'Team losses'] + [item.attrs.get('data-tip',item.get_text()) for item in soup.find_all('table')[1].find_all('tr')[0].find_all('th')[1:-1] ] + ['MVP point share']
+        csv_comment = (
+            ['Season start year','Team wins', 'Team losses', 'Player ID for website URL'] 
+            + [item.attrs.get('data-tip',item.get_text()) for item in soup.find_all('table')[1].find_all('tr')[0].find_all('th')[1:-1] ] 
+            + ['MVP point share']
+        )
         with open(filepath, 'r', encoding='utf-8') as f:
             og = f.read()
         with open(filepath, 'w', encoding='utf-8') as f:
