@@ -20,12 +20,12 @@ def scrape_per_game_tables(start : int, end : int):
     '''
     for year in range(start+1,end+2):                   # the urls label the 'year' of a season by the end year whereas we chose the start year
         print(f'Scraping data for the {year-1}-{year} season...')
-        url_add = f'/leagues/NBA_{year}_per_game.html'
         dirname = f'/data/{year-1}-{year}_season'
         filename = f'per_game_stats_{year-1}-{year}.csv'
         filepath = str(ROOT) + dirname +'/' + filename
         os.makedirs(str(ROOT) + dirname, exist_ok=True)
         
+        url_add = f'/leagues/NBA_{year}_per_game.html'
         req = requests.get(url=BASE_URL+url_add, headers=HTTP_HEADER)
         req.encoding= 'utf-8'                           # these are necessary to ensure that the names get encoded correctly if they are accented
         time.sleep(3.3)                                 # need to rest or the site might get mad at us
