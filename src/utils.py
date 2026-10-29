@@ -27,6 +27,7 @@ def scrape_per_game_tables(start : int, end : int):
         os.makedirs(str(ROOT) + dirname, exist_ok=True)
         
         req = requests.get(url=BASE_URL+url_add, headers=HTTP_HEADER)
+        req.encoding= 'utf-8'
         time.sleep(3.3)                                 # need to rest or the site might get mad at us
         soup = BeautifulSoup(req.text,'html.parser')
         
@@ -40,6 +41,7 @@ def scrape_per_game_tables(start : int, end : int):
         
         url_add = f'leagues/NBA_{year}_ratings.html'
         team_req = requests.get(url=BASE_URL+url_add, headers=HTTP_HEADER)
+        team_req.encoding= 'utf-8'
         time.sleep(3.3)                                 # need to rest or the site might get mad at us
         team_soup = BeautifulSoup(team_req.text, "html.parser")
         team_data = team_soup.find_all('table')[0].find_all('tr')[2:]
@@ -56,6 +58,7 @@ def scrape_per_game_tables(start : int, end : int):
         print(f'Adding MVP vote share...')
         url_add = f'awards/awards_{year}.html'
         mvp_req = requests.get(url=BASE_URL+url_add, headers=HTTP_HEADER)
+        mvp_req.encoding= 'utf-8'
         time.sleep(3.3)                                 # need to rest or the site might get mad at us
         mvp_df = pd.read_html(StringIO(mvp_req.text), encoding='utf-8',header=1)[0]
         
