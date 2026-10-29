@@ -56,13 +56,20 @@ def scrape_per_game_tables(start : int, end : int):
         team_data = team_soup.find_all('table')[0].find_all('tr')[2:]
         
         df.insert(0,'Year',[year-1]*len(df))
-        df.insert(1,'Wins',[0]*len(df))
-        df.insert(2,'Losses',[0]*len(df))
+        df.insert(1,'W%',[0.0]*len(df))
         for team in team_data:
             code = team.a['href'][7:10]
-            df.loc[df['Team'] == code, ['Wins','Losses']] = [int(item.get_text()) for item in team.find_all("td")[3:5]]
-        df.loc[df['Team'].str.endswith('TM'),['Wins','Losses']] = np.nan
-        
+            wl = [int(item.get_text()) for item in team.find_all("td")[3:5]]
+            df.loc[df['Team'] == code, 'W%'] = wl[0]/(wl[0]+wl[1])
+        # dealing with multi-team players.  There nTM line will be a weighted average of their contributions to the win percent of the teams they played for
+        for row in df.loc[df['Team'].str.endswith('TM')].itertuples():
+            n_teams = int(row.Team[0])
+            ind = row.Index
+            gp = row.G
+            tot = 0
+            for offset in range(1,n_teams+1):
+                tot += df.iloc[ind+offset]['W%']*df.iloc[ind+offset]['G']
+            df.loc[ind,'W%'] = tot/gp
         
         # now we add a column with the MVP point share recieved by each player
         print(f'Adding MVP vote share...')
@@ -83,7 +90,7 @@ def scrape_per_game_tables(start : int, end : int):
         
         # add a comment to the top of the csv to explain the columns
         csv_comment = (
-            ['Season start year','Team wins', 'Team losses', 'Player ID for website URL'] 
+            ['Season start year','Team win percentage', 'Player ID for website URL'] 
             + [item.attrs.get('data-tip',item.get_text()) for item in soup.find_all('table')[1].find_all('tr')[0].find_all('th')[1:-1] ] 
             + ['MVP point share']
         )
