@@ -1,6 +1,7 @@
 import pandas as pd
 from bs4 import BeautifulSoup
 import numpy as np
+from IPython.display import clear_output
 
 import requests
 from io import StringIO
@@ -29,6 +30,7 @@ def scrape_per_game_tables(start : int, end : int):
     Because it adds a comment to the top of the csv to describe the columns you need to include a comment="#" when using pandas read_csv() function.
     '''
     for year in range(start+1,end+2):                   # the urls label the 'year' of a season by the end year whereas we chose the start year
+        clear_output(wait=True)
         print(f'Scraping data for the {year-1}-{year} season...')
         dirname = f'/data/{year-1}-{year}_season'
         filename = f'per_game_stats_{year-1}-{year}.csv'
@@ -40,7 +42,9 @@ def scrape_per_game_tables(start : int, end : int):
         soup = BeautifulSoup(req.text,'html.parser')
         
         df = pd.read_html(StringIO(req.text), encoding='utf-8')
-        df = df[0].drop(columns=['Rk','Awards'])
+        df = df[0].drop(columns=['Rk'])
+        df['Awards'] = df['Awards'].str.contains('AS', case=True, na=False).astype(int)
+        df = df.rename(columns={'Awards':'AS'})
         df = df.iloc[:-1]
         
         # we need to include the player code that basketball-reference puts in its individual player pages in the data so that we can distinguish players with the same name
@@ -81,9 +85,9 @@ def scrape_per_game_tables(start : int, end : int):
         player_codes = [item.td['data-append-csv'] for item in mvp_soup.table.find_all('tr')[2:] if item.td.get('data-append-csv')]   # need the codes to match the data to our main df
         mvp_df.insert(0,'Code',player_codes)
         # add a column to the df that is to be exported and populate it
-        df['MVP'] = [0.0]*len(df)
+        df['MVPVS'] = [0.0]*len(df)
         for player_code in mvp_df.Code:
-            df.loc[df['Code'] == player_code, 'MVP'] = sum(mvp_df[mvp_df['Code'] == player_code]['Share'])
+            df.loc[df['Code'] == player_code, 'MVPVS'] = sum(mvp_df[mvp_df['Code'] == player_code]['Share'])
         
         # export the df to a csv
         df.to_csv(filepath,encoding='utf-8',index=False)
@@ -91,13 +95,15 @@ def scrape_per_game_tables(start : int, end : int):
         # add a comment to the top of the csv to explain the columns
         csv_comment = (
             ['Season start year','Team win percentage', 'Player ID for website URL'] 
-            + [item.attrs.get('data-tip',item.get_text()) for item in soup.find_all('table')[1].find_all('tr')[0].find_all('th')[1:-1] ] 
+            + [item.attrs.get('data-tip',item.get_text()) for item in soup.find_all('table')[1].find_all('tr')[0].find_all('th')[1:-1] ]
+            + ['Allstar']
             + ['MVP point share']
         )
         with open(filepath, 'r', encoding='utf-8') as f:
             og = f.read()
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(f'# {",".join(csv_comment)}\n' + og)
+    print('Download complete!')
         
 def player_stat_dataframe(start: int, end: int)-> pd.DataFrame:
     '''
@@ -116,5 +122,9 @@ def player_stat_dataframe(start: int, end: int)-> pd.DataFrame:
         for f in Path(str(ROOT)+'/data/'+d.name).iterdir():
             filepath = str(ROOT) + f'/data/{d.name}/{f.name}'
             df_tmp = pd.read_csv(filepath,encoding='utf-8',comment='#')
+            df_tmp = df_tmp.sort_values(by='MVPVS',ascending=False)
+            df_tmp.insert(df_tmp.shape[1]-1,'MVP',[0]*len(df_tmp))
+            df_tmp['MVP'] = [1] + [0]*(len(df_tmp)-1)
             df = pd.concat([df,df_tmp],ignore_index=True)
+    df.insert(9,'GP%',df['G']/82)
     return df

@@ -3,3 +3,4 @@
 3. 'Games started' seems to be important but we should probably make it a ratio of total games played to that point so that all features are per-game and then the model could be applied mid season 
 4. Test Logistic Regression as a means for classifying vote receivers
 5. Try considering whether or not a player was MVP within the last 2-3 years? maybe categorical with the category being 0, 1, 2 meaning didnt win, won last year, won the last two years? (Or just boolean)
+6. Work on quasibinomial regressor for predicting vote share
