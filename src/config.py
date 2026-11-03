@@ -6,6 +6,8 @@ while not (ROOT / ".git").exists() and ROOT != ROOT.parent:
 
 START_YEAR = 1980
 END_YEAR = 2025
+HOLDOUT_START=2019
+MP_THRESHOLD=15
 
 BASE_URL = 'https://www.basketball-reference.com/'
 HTTP_HEADER = {
