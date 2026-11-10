@@ -1,0 +1,29 @@
+# Python packages for the NBA MVP prediction project.
+# Install into the project's conda env:
+# e.g.-->  conda activate nba-mvp 
+#   conda install -c conda-forge --file requirements.txt
+# (or: pip install -r requirements.txt)
+
+# data collection (src/utils.py scrapes Basketball-Reference)
+requests
+beautifulsoup4
+lxml
+
+# data handling
+numpy
+pandas
+
+# models
+# scikit-learn 1.5+ is needed for TunedThresholdClassifierCV (model_exploration)
+scikit-learn>=1.5
+statsmodels
+# shap for per-stat breakdown of gradient boosting picks (binomial_model_nt visuals)
+shap
+
+# plots
+matplotlib
+seaborn
+
+# notebooks
+ipykernel
+ipython
