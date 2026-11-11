@@ -8,9 +8,10 @@ START_YEAR = 1980
 END_YEAR = 2025
 HOLDOUT_START=2019
 MP_THRESHOLD=15
-RULE_START = 2023
-MIN_GAMES_BEFORE_RULE = 30
-MIN_GAMES_AFTER_RULE = 60
+
+#MVP eligibility (CBA rule since 2023-24), applied to every season and scaled to season length
+MIN_GAMES_SHARE = 65 / 82    #65 of 82 games
+MIN_MP = 20                  #minutes per game
 
 BASE_URL = 'https://www.basketball-reference.com/'
 HTTP_HEADER = {
