@@ -122,9 +122,17 @@ def player_stat_dataframe(start: int, end: int)-> pd.DataFrame:
         for f in Path(str(ROOT)+'/data/'+d.name).iterdir():
             filepath = str(ROOT) + f'/data/{d.name}/{f.name}'
             df_tmp = pd.read_csv(filepath,encoding='utf-8',comment='#')
-            df_tmp = df_tmp.sort_values(by='MVPVS',ascending=False)
             df_tmp.insert(df_tmp.shape[1]-1,'MVP',[0]*len(df_tmp))
             df_tmp['MVP'] = [1] + [0]*(len(df_tmp)-1)
+            # we want to work with per-game stats so we insert a column which has the games played as a fraction of the regular season
+            df_tmp.insert(9,'GP%',df_tmp['G']/df_tmp['G'].max())
+            # all NaNs appear in % stats where the player did not attempt any of the underlying category.  We will set these nans to 0
+            df_tmp = df_tmp.fillna(0.0)
+            # want to remove cases where players have multiple teams due to trading
+            for row in df_tmp.loc[df_tmp['Team'].str.endswith('TM')].itertuples():
+                n_teams = int(row.Team[0])
+                ind = row.Index
+                df_tmp = df_tmp.drop(list(range(ind + 1, ind + n_teams + 1)))
             df = pd.concat([df,df_tmp],ignore_index=True)
-    df.insert(9,'GP%',df['G']/82)
+    
     return df
