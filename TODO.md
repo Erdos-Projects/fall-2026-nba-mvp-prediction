@@ -7,4 +7,4 @@
 7. Remove non-total traded player stat entries 
 8. Make a function for finding feature subsets for a generic model in utils.py
 9. **(cond logit for MVP done) Clean up the classifier and regressor notebooks, try XGBoost for classifier and cond. logit for MVP
-10. hyperparameter tuning needs to be done in both the classifiers and the regressors
+10. * hyperparameter tuning needs to be done in both the classifiers and the regressors
