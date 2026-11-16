@@ -124,6 +124,8 @@ def player_stat_dataframe(start: int, end: int)-> pd.DataFrame:
             df_tmp = pd.read_csv(filepath,encoding='utf-8',comment='#')
             # we want to work with per-game stats so we insert a column which has the games played as a fraction of the regular season
             df_tmp.insert(9,'GP%',df_tmp['G']/df_tmp['G'].max())
+            # adding GS% as well
+            df_tmp.insert(9,'GS%',df_tmp['GS']/df_tmp['G'].max())
             # all NaNs appear in % stats where the player did not attempt any of the underlying category.  We will set these nans to 0
             df_tmp = df_tmp.fillna(0.0)
             # want to remove cases where players have multiple teams due to trading
@@ -138,3 +140,23 @@ def player_stat_dataframe(start: int, end: int)-> pd.DataFrame:
             
     
     return df
+
+def forward_chaining_splits(years, min_train_years=1, val_years=1, step=1, gap=0):
+    """
+    Train on all years before the cutoff, validate on the next val_years.
+    
+    years - The 'Year' column of the DataFrame.
+    min_train_years - The number of years from 1980 onward to start forward chaining on.  Default is 1 which would start the splits as containing the 1980-81 season alone for training.
+    val-years - Number of years to validate on.
+    step - Growth in the size of the training data set between each split.
+    gap - Number of years to skip between train and val.
+    """
+    
+    years = np.asarray(years)
+    unique = np.sort(np.unique(years))
+    last_start = len(unique) - gap - val_years
+    for i in range(min_train_years, last_start + 1, step):
+        train_yrs = unique[:i]
+        val_yrs = unique[i + gap : i + gap + val_years]
+        yield (np.where(np.isin(years, train_yrs))[0],
+               np.where(np.isin(years, val_yrs))[0])
