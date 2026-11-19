@@ -6,7 +6,7 @@ while not (ROOT / ".git").exists() and ROOT != ROOT.parent:
 
 START_YEAR = 1980
 END_YEAR = 2025
-HOLDOUT_START=2019
+HOLDOUT_START=2025
 MP_THRESHOLD=15
 
 #MVP eligibility (CBA rule since 2023-24), applied to every season and scaled to season length

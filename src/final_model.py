@@ -74,13 +74,14 @@ class ClassifiedRegressor(BaseEstimator, RegressorMixin):
         y_l = self._label(y_e)
         
         # create the classified data for training the regressor
-        self.cv_ = self._internal_chaining(X_e)
+        # self.cv_ = self._internal_chaining(X_e)
         X_e = X_e.drop(columns=['Year','GP%','MP'])
-        reg_mask = np.zeros(len(self.cv_[0][0]))
-        for chain in self.cv_:
-            tmp_classifier_ = clone(self.classifier).fit(X_e.iloc[chain[0]], y_l.iloc[chain[0]])
-            reg_mask = np.append(reg_mask, tmp_classifier_.predict_proba(X_e.iloc[chain[1]])[:,1])
-        reg_mask = (reg_mask > self.threshold)
+        # reg_mask = np.zeros(len(self.cv_[0][0]))
+        # for chain in self.cv_:
+        #     tmp_classifier_ = clone(self.classifier).fit(X_e.iloc[chain[0]], y_l.iloc[chain[0]])
+        #     reg_mask = np.append(reg_mask, tmp_classifier_.predict_proba(X_e.iloc[chain[1]])[:,1])
+        # reg_mask = (reg_mask > self.threshold)
+        reg_mask = np.array([True]*len(X_e))
 
         
         # train the classifier on all eligible data
