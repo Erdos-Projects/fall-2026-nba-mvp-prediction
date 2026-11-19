@@ -23,6 +23,7 @@ shap
 # plots
 matplotlib
 seaborn
+plotly
 
 # notebooks
 ipykernel

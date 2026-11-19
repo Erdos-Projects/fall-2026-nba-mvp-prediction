@@ -70,6 +70,7 @@ class ClassifiedRegressor(BaseEstimator, RegressorMixin):
             raise ValueError('training data must contain the "Year", "GP%" and "MP" columns')
         # remove ineligible players and prepare target data
         X = X.sort_values('Year')
+        y = y.loc[X.index]
         X_e, y_e = X[self._eligible(X)], y[self._eligible(X)]
         y_l = self._label(y_e)
         
