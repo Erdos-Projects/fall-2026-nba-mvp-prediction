@@ -9,7 +9,7 @@ import time
 import os
 from pathlib import Path
 
-from config import ROOT, BASE_URL, HTTP_HEADER
+from config import ROOT, BASE_URL, HTTP_HEADER, CURRENT_SEASON
 
 def http_get(url):
     '''
@@ -42,10 +42,14 @@ def scrape_per_game_tables(start : int, end : int):
         soup = BeautifulSoup(req.text,'html.parser')
         
         df = pd.read_html(StringIO(req.text), encoding='utf-8')
-        df = df[0].drop(columns=['Rk'])
-        df['Awards'] = df['Awards'].str.contains('AS', case=True, na=False).astype(int)
-        df = df.rename(columns={'Awards':'AS'})
-        df = df.iloc[:-1]
+        if year - 1 != CURRENT_SEASON:
+            df = df[0].drop(columns=['Rk'])
+            df['Awards'] = df['Awards'].str.contains('AS', case=True, na=False).astype(int)
+            df = df.rename(columns={'Awards':'AS'})
+            df = df.iloc[:-1]
+        else:
+            df = df[0].drop(columns=['Rk','Awards'])
+            df = df.iloc[:-1]
         
         # we need to include the player code that basketball-reference puts in its individual player pages in the data so that we can distinguish players with the same name
         player_codes = [item.td['data-append-csv'] for item in soup.table.find_all('tr')[1:-1] if item.td.get('data-append-csv')]
@@ -76,29 +80,31 @@ def scrape_per_game_tables(start : int, end : int):
             df.loc[ind,'W%'] = tot/gp
         
         # now we add a column with the MVP point share recieved by each player
-        print(f'Adding MVP vote share...')
-        # scrape the data and put it in a df
-        url_add = f'awards/awards_{year}.html'
-        mvp_req = http_get(url=BASE_URL+url_add)
-        mvp_soup = BeautifulSoup(mvp_req.text, 'lxml')
-        mvp_df = pd.read_html(StringIO(mvp_req.text), encoding='utf-8',header=1)[0]
-        player_codes = [item.td['data-append-csv'] for item in mvp_soup.table.find_all('tr')[2:] if item.td.get('data-append-csv')]   # need the codes to match the data to our main df
-        mvp_df.insert(0,'Code',player_codes)
-        # add a column to the df that is to be exported and populate it
-        df['MVPVS'] = [0.0]*len(df)
-        for player_code in mvp_df.Code:
-            df.loc[df['Code'] == player_code, 'MVPVS'] = sum(mvp_df[mvp_df['Code'] == player_code]['Share'])
-        
+        if year - 1 != CURRENT_SEASON:
+            print(f'Adding MVP vote share...')
+            # scrape the data and put it in a df
+            url_add = f'awards/awards_{year}.html'
+            mvp_req = http_get(url=BASE_URL+url_add)
+            mvp_soup = BeautifulSoup(mvp_req.text, 'lxml')
+            mvp_df = pd.read_html(StringIO(mvp_req.text), encoding='utf-8',header=1)[0]
+            player_codes = [item.td['data-append-csv'] for item in mvp_soup.table.find_all('tr')[2:] if item.td.get('data-append-csv')]   # need the codes to match the data to our main df
+            mvp_df.insert(0,'Code',player_codes)
+            # add a column to the df that is to be exported and populate it
+            df['MVPVS'] = [0.0]*len(df)
+            for player_code in mvp_df.Code:
+                df.loc[df['Code'] == player_code, 'MVPVS'] = sum(mvp_df[mvp_df['Code'] == player_code]['Share'])
+            
         # export the df to a csv
         df.to_csv(filepath,encoding='utf-8',index=False)
         
         # add a comment to the top of the csv to explain the columns
         csv_comment = (
             ['Season start year','Team win percentage', 'Player ID for website URL'] 
-            + [item.attrs.get('data-tip',item.get_text()) for item in soup.find_all('table')[1].find_all('tr')[0].find_all('th')[1:-1] ]
-            + ['Allstar']
-            + ['MVP point share']
+            + [item.attrs.get('data-tip',item.get_text()) for item in soup.find_all('table')[0].find_all('tr')[0].find_all('th')[1:-1]]
         )
+        
+        if year - 1 != CURRENT_SEASON:
+            csv_comment += ['Allstar'] + ['MVP point share']
         with open(filepath, 'r', encoding='utf-8') as f:
             og = f.read()
         with open(filepath, 'w', encoding='utf-8') as f:
@@ -133,9 +139,10 @@ def player_stat_dataframe(start: int, end: int)-> pd.DataFrame:
                 n_teams = int(row.Team[0])
                 ind = row.Index
                 df_tmp = df_tmp.drop(list(range(ind + 1, ind + n_teams + 1)))
-            df_tmp = df_tmp.sort_values(by='MVPVS',ascending=False,ignore_index=True)
-            df_tmp.insert(df_tmp.shape[1]-1,'MVP',[0]*len(df_tmp))
-            df_tmp['MVP'] = [1] + [0]*(len(df_tmp)-1)
+            if 'MVPVS' in df_tmp.columns:
+                df_tmp = df_tmp.sort_values(by='MVPVS',ascending=False,ignore_index=True)
+                df_tmp.insert(df_tmp.shape[1]-1,'MVP',[0]*len(df_tmp))
+                df_tmp['MVP'] = [1] + [0]*(len(df_tmp)-1)
             df = pd.concat([df,df_tmp],ignore_index=True)
             
     
